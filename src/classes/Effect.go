@@ -6,10 +6,14 @@ type Observer interface {
 
 type Effect interface {
 	Apply()
-	Proc()
 	Observer
 	GetId() string
 	GetSource() string
+}
+
+type Dot interface {
+	Effect
+	ProcDot()
 }
 
 type Buff struct {
@@ -26,12 +30,13 @@ type Debuff struct {
 	Removable       bool
 }
 
-type Dot struct {
+type DotDebuff struct {
 	Debuff
 	Stacks  int
-	Source  *Creature
-	Holder  *Creature
+	Source  *Entity
+	Holder  *Entity
 	IsBreak bool
+	Scaling map[*Stat]float64
 }
 
 func (b *Buff) GetId() string {
@@ -42,8 +47,8 @@ func (b *Buff) GetSource() string {
 	return b.SourceName
 }
 
-func MakeBurn(source *Creature, Holder *Creature, strength float64, duration int) *Dot {
-	return &Dot{
+func MakeBurn(source *Entity, Holder *Entity, strength float64, duration int) *DotDebuff {
+	return &DotDebuff{
 		Debuff: Debuff{
 			Buff: Buff{
 				Id:       "burn",
@@ -60,27 +65,27 @@ func MakeBurn(source *Creature, Holder *Creature, strength float64, duration int
 	}
 }
 
-func (d *Dot) Apply() {
+func (d *DotDebuff) Apply() {
 	if d.Holder.ApplyDebuff(d) {
 		d.Holder.AddListener(d.Update, "turnEnd", d.Id)
-		d.Holder.AddListener(d.Proc, "turnStart", d.Id)
+		d.Holder.AddListener(d.ProcDot, "turnStart", d.Id)
 	}
 }
 
-func (d *Dot) Proc() {
+func (d *DotDebuff) ProcDot() {
 	attack := &Attack{
 		Name:          d.Source.Name,
 		Attacker:      d.Source.Name,
 		Target:        d.Holder.Name,
-		Element:       "fire", // todo: make this dynamic
+		Element:       d.Id, // todo: make this dynamic
 		AttackerLevel: d.Source.Level,
-		PreMitDamage:  d.Source.Atk.GetStat() * d.Strength,
+		Scaling:       map[Stat]float64{d.Source.Atk: d.Strength},
 		DefPen:        0,
 	}
 	d.Holder.TakeDamage(attack)
 	d.Source.LogDamageOut(attack)
 }
 
-func (d *Dot) Update() {
+func (d *DotDebuff) Update() {
 	d.Duration--
 }

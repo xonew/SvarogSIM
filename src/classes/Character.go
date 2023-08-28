@@ -8,7 +8,7 @@ type Ally interface {
 }
 
 type Character struct {
-	Creature
+	Entity
 	Element string
 	Path    string
 	Eidolon int
@@ -25,10 +25,6 @@ func MakeCharacter(name string, element string, path string,
 	baseHp float64, baseAtk float64, baseDef float64, baseSpd float64) Character {
 	aggro := 0
 	switch path {
-	case "elite":
-		aggro = -1
-	case "add":
-		aggro = -2
 	case "hunt":
 		aggro = 75
 	case "erudition":
@@ -45,7 +41,7 @@ func MakeCharacter(name string, element string, path string,
 		aggro = 150
 	}
 	return Character{
-		Creature: Creature{
+		Entity: Entity{
 			Name:               name,
 			Level:              level,
 			CurrHp:             0,

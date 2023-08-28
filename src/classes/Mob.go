@@ -10,7 +10,7 @@ type Enemy interface {
 }
 
 type Mob struct {
-	Creature
+	Entity
 	EnemyType       string
 	MaxToughness    float64
 	CurrToughness   float64
@@ -21,7 +21,7 @@ type Mob struct {
 func MakeMob(name string, level int, enemyType string, toughness float64,
 	weaknesses map[string]bool, baseHp float64, baseAtk float64, baseDef float64, baseSpd float64) *Mob {
 	return &Mob{
-		Creature: Creature{
+		Entity: Entity{
 			Name:               name,
 			Level:              level,
 			CurrHp:             int(baseHp),

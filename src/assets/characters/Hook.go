@@ -43,7 +43,7 @@ func (h *Hook) basicAttack(target Actor) int {
 		h.Atk: 0.80,
 	})
 	target.TakeDamage(hit)
-	h.HitEvent("out", hit)
+	h.HitEvent("outStart", hit)
 	h.Event("basicEnd")
 	h.RegenEnergy(20)
 	return 1
@@ -51,6 +51,7 @@ func (h *Hook) basicAttack(target Actor) int {
 
 func (h *Hook) skill(target Actor) int {
 	var hit *Attack
+
 	if h.Enhanced {
 		h.DmgBonus["skill"] += 0.20
 		hit = h.MakeAttack("Enhanced Skill", target.GetName(), "fire", "skill", map[Stat]float64{
