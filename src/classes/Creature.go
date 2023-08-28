@@ -58,8 +58,11 @@ type Entity struct {
 	CritRate float64
 	CritDmg  float64
 
-	Listeners    map[string]map[string]func() //map[Event]map[Id]func()
+	Listeners map[string]map[string]func() //map[Event]map[Id]func()  why do i need id?
+	//Events: turnStart, turnEnd, death, basicStart, basicEnd, skillStart, skillEnd, outStart, outEnd, inStart, inEnd
 	HitListeners map[string]map[string]func(*Attack)
+	//Events: outStart, outEnd, inStart, inEnd
+
 	DamageOutLog map[string][]*Attack
 	DamageInLog  map[string][]*Attack
 	Left         Actor
