@@ -9,6 +9,7 @@ type Effect interface {
 	Observer
 	GetId() string
 	GetSource() string
+	GetEffectiveHitRate() float64
 }
 
 type Dot interface {
@@ -28,6 +29,8 @@ type Debuff struct {
 	Buff
 	IsControlEffect bool
 	Removable       bool
+	BaseHitRate     float64
+	EffectHitRate   float64
 }
 
 type DotDebuff struct {
@@ -67,19 +70,24 @@ func MakeBurn(source *Entity, Holder *Entity, strength float64, duration int) *D
 
 func (d *DotDebuff) Apply() {
 	if d.Holder.ApplyDebuff(d) {
-		d.Holder.AddListener(d.Update, "turnEnd", d.Id)
-		d.Holder.AddListener(d.ProcDot, "turnStart", d.Id)
+		d.Holder.AddListener(d.Update, "turnStart", d.Id)
 	}
 }
 
 func (d *DotDebuff) ProcDot() {
+	scaling := make(map[Stat]float64)
+	for keyPointer, value := range d.Scaling {
+		// Dereference the pointer to "snapshot" the stat
+		key := *keyPointer
+		scaling[key] = value
+	}
 	attack := &Attack{
 		Name:          d.Source.Name,
 		Attacker:      d.Source.Name,
 		Target:        d.Holder.Name,
-		Element:       d.Id, // todo: make this dynamic
+		Element:       d.Id,
 		AttackerLevel: d.Source.Level,
-		Scaling:       map[Stat]float64{d.Source.Atk: d.Strength},
+		Scaling:       scaling,
 		DefPen:        0,
 	}
 	d.Holder.TakeDamage(attack)
@@ -87,5 +95,10 @@ func (d *DotDebuff) ProcDot() {
 }
 
 func (d *DotDebuff) Update() {
+	d.ProcDot()
 	d.Duration--
+}
+
+func (d *Debuff) GetEffectiveHitRate() float64 {
+	return d.BaseHitRate * (1 + d.EffectHitRate)
 }

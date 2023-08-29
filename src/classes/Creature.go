@@ -27,9 +27,10 @@ type Actor interface {
 	GetRight() Actor
 	TakeDamage(attack *Attack)
 	GetActionValue() int // returns action value
-	//RestoreHp(amount int) int
+	RestoreHp(amount int) int
 	AddToRight(actor Actor)
 	AddToLeft(actor Actor)
+	HasDebuff(s string) bool
 }
 
 type Entity struct {
@@ -41,6 +42,9 @@ type Entity struct {
 	Atk    Stat
 	Def    Stat
 	Spd    Stat
+
+	IncomingHealingBonus float64
+	OutgoingHealingBonus float64
 
 	EffectHitRate      float64
 	EffectResist       float64
@@ -68,8 +72,6 @@ type Entity struct {
 	Left         Actor
 	Right        Actor
 	Heapify      func()
-
-	ConditionalAttackModifiers []*func(*Attack)
 }
 
 type Attack struct {
@@ -93,6 +95,15 @@ func (c *Entity) GetName() string {
 	return c.Name
 }
 
+func (c *Entity) RestoreHp(amount int) int {
+	postBonusHealing := int(float64(amount) * (1 + c.IncomingHealingBonus))
+	if c.CurrHp+postBonusHealing > int(c.Hp.GetStat()) {
+		postBonusHealing = int(c.Hp.GetStat()) - c.CurrHp
+	}
+	c.CurrHp += postBonusHealing
+	return postBonusHealing
+}
+
 /*
 Outgoing DMG = Base DMG * DMG% Multiplier * DEF Multiplier * RES Multiplier * DMG Taken Multiplier * Universal DMG Reduction Multiplier * Weaken Multiplier
 
@@ -110,6 +121,17 @@ func (c *Entity) GetActionValue() int {
 	return c.ActionValue
 }
 
+func (c *Entity) HasDebuff(s string) bool {
+	for _, debuffs := range c.Debuffs {
+		for _, debuff := range debuffs {
+			if debuff.GetId() == s {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // ApplyBuff applies a buff to the creature, overwriting buffs of the same type and wielder
 func (c *Entity) ApplyBuff(buff Effect) {
 	c.Buffs[buff.GetId()][buff.GetSource()] = buff
@@ -119,12 +141,20 @@ func (c *Entity) ApplyBuff(buff Effect) {
 
 // ApplyDebuff applies a debuff to the creature, overwriting debuffs of the same type and wielder
 func (c *Entity) ApplyDebuff(debuff Effect) bool {
-	c.Debuffs[debuff.GetId()][debuff.GetSource()] = debuff
-	debuff.Apply()
+	if debuff.GetEffectiveHitRate()*(1-c.EffectResist) < rand.Float64() { //TODO: make this into a helper function
+		c.Debuffs[debuff.GetId()][debuff.GetSource()] = debuff
+		debuff.Apply()
+		c.Event("debuffApplied")
+		return true
+	} else {
+		c.Event("debuffResisted")
+		return false
+	}
 }
 
 // TakeDamage receives an attack, and returns the final damage taken
 func (c *Entity) TakeDamage(attack *Attack) {
+	c.HitEvent("inStart", attack)
 	defMultiplier := 0.01 * (100 - (c.Def.GetStat() / (c.Def.GetReducedStat(attack.DefPen) + 200 + 10*float64(attack.AttackerLevel))))
 	resMultiplier := 0.01 * (100 - (c.Res[attack.Element] - attack.ResPen))
 	dmgTakenMultiplier := 1.0              //TODO: Implement elemental dmg taken
@@ -142,6 +172,7 @@ func (c *Entity) TakeDamage(attack *Attack) {
 	}
 	attack.PostMitDamage = postMitDamage
 	c.LogDamageIn(attack)
+	c.HitEvent("inEnd", attack)
 }
 
 func (c *Entity) MakeAttack(name string, target string,
@@ -158,7 +189,7 @@ func (c *Entity) MakeAttack(name string, target string,
 		Element:       element,
 		AttackerLevel: c.Level,
 		Scaling:       scaling,
-		DamageBonus:   (1 + c.DmgBonus[attackType] + c.DmgBonus["all"] + c.DmgBonus[element]),
+		DamageBonus:   1 + c.DmgBonus[attackType] + c.DmgBonus["all"] + c.DmgBonus[element],
 		CritRate:      c.CritRate,
 		CritDmg:       c.CritDmg,
 		DefPen:        c.DefPen,

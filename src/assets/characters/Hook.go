@@ -27,14 +27,14 @@ func (h *Hook) Init(left Ally, right Ally, heapify func()) {
 	h.Right = right
 }
 
-func (h *Hook) Act(allies []Ally, enemies []Enemy, skillPoints int) int {
+func (h *Hook) Act(allies []Ally, enemies []Enemy, skillPoints *int) {
 	pointGain := 0
-	if skillPoints > 0 {
+	if *skillPoints > 0 {
 		pointGain += h.skill(Target(enemies))
 	} else {
 		pointGain += h.basicAttack(Target(enemies))
 	}
-	return skillPoints + pointGain
+	*skillPoints += pointGain
 }
 
 func (h *Hook) basicAttack(target Actor) int {
@@ -42,14 +42,16 @@ func (h *Hook) basicAttack(target Actor) int {
 	hit := h.MakeAttack("Basic Attack", target.GetName(), "fire", "skill", map[Stat]float64{
 		h.Atk: 0.80,
 	})
-	target.TakeDamage(hit)
 	h.HitEvent("outStart", hit)
+	target.TakeDamage(hit)
+	h.HitEvent("outEnd", hit)
 	h.Event("basicEnd")
 	h.RegenEnergy(20)
 	return 1
 }
 
 func (h *Hook) skill(target Actor) int {
+	h.Event("skillStart")
 	var hit *Attack
 
 	if h.Enhanced {
@@ -85,20 +87,19 @@ func (h *Hook) skill(target Actor) int {
 	h.talent(target)
 
 	//apply burn
-
+	h.Event("skillEnd")
 	h.RegenEnergy(30)
 	return -1
 }
 
 func (h *Hook) talent(target Actor) {
-	//TODO: if target.HasDebuff("burn") || target.HasDebuff("breakBurn") {
-	if true {
+	if target.HasDebuff("burn") {
 		hit := h.MakeAttack("Talent", target.GetName(), "fire", "additional", map[Stat]float64{
 			h.Atk: 1.0,
 		})
 		target.TakeDamage(hit)
 	}
-	//TODO: h.RestorePercentHp(0.05)
+	h.RestoreHp(int(h.Hp.GetStat() * 0.05))
 }
 
 func (h *Hook) GetCharacter() *Character {
