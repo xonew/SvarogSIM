@@ -56,7 +56,7 @@ func (m *Mob) MakeAttack(ally Ally) *Attack {
 		Target:        ally.GetName(),
 		Element:       "none",
 		AttackerLevel: m.Level,
-		PreMitDamage:  0,
+		Scaling:       map[Stat]float64{m.Atk: 0},
 		DefPen:        0,
 		ResPen:        0,
 		PostMitDamage: 0,

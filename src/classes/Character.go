@@ -1,7 +1,7 @@
 package classes
 
 type Ally interface {
-	Actor
+	Creature
 	Init(left Ally, right Ally, heapify func())
 	GetAggro() float64
 	GetCharacter() *Character

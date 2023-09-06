@@ -1,6 +1,9 @@
 package classes
 
-import "math/rand"
+import (
+	"math"
+	"math/rand"
+)
 
 type Stat struct {
 	Base    float64
@@ -18,6 +21,11 @@ func (s *Stat) GetReducedStat(reduction float64) float64 {
 
 type Actor interface {
 	Act(allies []Ally, enemies []Enemy, skillPoints int) int
+	GetActionValue() int // returns action value
+
+}
+type Creature interface {
+	Actor
 	ApplyBuff(buff Effect) bool
 	ApplyDebuff(debuff Effect) bool
 	//Dispel() bool // gets rid of buff
@@ -26,7 +34,6 @@ type Actor interface {
 	GetLeft() Actor
 	GetRight() Actor
 	TakeDamage(attack *Attack)
-	GetActionValue() int // returns action value
 	RestoreHp(amount int) int
 	AddToRight(actor Actor)
 	AddToLeft(actor Actor)
@@ -74,23 +81,6 @@ type Entity struct {
 	Heapify      func()
 }
 
-type Attack struct {
-	Name          string
-	Attacker      string
-	Target        string
-	Element       string
-	AttackType    string
-	AttackerLevel int
-	Scaling       map[Stat]float64
-	FlatDamage    float64
-	CritRate      float64
-	CritDmg       float64
-	DamageBonus   float64
-	DefPen        float64
-	ResPen        float64
-	PostMitDamage int
-}
-
 func (c *Entity) GetName() string {
 	return c.Name
 }
@@ -121,15 +111,27 @@ func (c *Entity) GetActionValue() int {
 	return c.ActionValue
 }
 
+func (c *Entity) GetDebuffs() *map[string]map[string]Effect {
+	return &c.Debuffs
+}
+
 func (c *Entity) HasDebuff(s string) bool {
-	for _, debuffs := range c.Debuffs {
-		for _, debuff := range debuffs {
-			if debuff.GetId() == s {
+	for _, ids := range c.Debuffs {
+		for _, source := range ids {
+			if source.GetId() == s {
 				return true
 			}
 		}
 	}
 	return false
+}
+
+func (c *Entity) GetBaseActionValue() int {
+	return int(10000 / c.Spd.GetStat())
+}
+
+func (c *Entity) ActionAdvance(value float64) {
+	c.ActionValue = int(math.Max(0, float64(c.ActionValue)*(1-value)))
 }
 
 // ApplyBuff applies a buff to the creature, overwriting buffs of the same type and wielder
@@ -150,54 +152,6 @@ func (c *Entity) ApplyDebuff(debuff Effect) bool {
 		c.Event("debuffResisted")
 		return false
 	}
-}
-
-// TakeDamage receives an attack, and returns the final damage taken
-func (c *Entity) TakeDamage(attack *Attack) {
-	c.HitEvent("inStart", attack)
-	defMultiplier := 0.01 * (100 - (c.Def.GetStat() / (c.Def.GetReducedStat(attack.DefPen) + 200 + 10*float64(attack.AttackerLevel))))
-	resMultiplier := 0.01 * (100 - (c.Res[attack.Element] - attack.ResPen))
-	dmgTakenMultiplier := 1.0              //TODO: Implement elemental dmg taken
-	universalDmgReductionMultiplier := 0.9 //TODO: Implement universal dmg reduction
-	preMitDamage := attack.FlatDamage
-	for stat, mod := range attack.Scaling {
-		preMitDamage += mod * stat.GetStat()
-	}
-	postMitDamage := int(preMitDamage * defMultiplier * resMultiplier * dmgTakenMultiplier * universalDmgReductionMultiplier)
-	if c.CurrHp-postMitDamage <= 0 {
-		c.CurrHp = 0
-		c.Event("death")
-	} else {
-		c.CurrHp -= postMitDamage
-	}
-	attack.PostMitDamage = postMitDamage
-	c.LogDamageIn(attack)
-	c.HitEvent("inEnd", attack)
-}
-
-func (c *Entity) MakeAttack(name string, target string,
-	element string, attackType string,
-	scaling map[Stat]float64) *Attack {
-	preMitDamage := 0.0
-	for stat, mod := range scaling {
-		preMitDamage += mod * stat.GetStat()
-	}
-	attack := &Attack{
-		Name:          name,
-		Attacker:      c.Name,
-		Target:        target,
-		Element:       element,
-		AttackerLevel: c.Level,
-		Scaling:       scaling,
-		DamageBonus:   1 + c.DmgBonus[attackType] + c.DmgBonus["all"] + c.DmgBonus[element],
-		CritRate:      c.CritRate,
-		CritDmg:       c.CritDmg,
-		DefPen:        c.DefPen,
-		ResPen:        c.ResPen[element] + c.ResPen["all"] + c.ResPen[attackType],
-		PostMitDamage: 0,
-	}
-	c.LogDamageOut(attack)
-	return attack
 }
 
 // RollCrit returns the crit multiplier if the attack crits, or 1 if it doesn't

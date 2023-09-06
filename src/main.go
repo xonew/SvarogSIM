@@ -1,13 +1,15 @@
 package main
 
-//import (
-//	. "SvarogSIM/src/classes"
-//)
+import (
+	. "SvarogSIM/src/classes"
+)
+import (
+	. "SvarogSIM/src/assets/characters"
+)
 
 func main() {
-	//var hook Actor = MakeHook()
-	//order := MakeActionOrder(
-	//	[]*Actor{&hook},
-	//	[]*Actor{MakeHook()})
+	order := MakeActionOrder(
+		[]Ally{MakeHook()},
+		[]Enemy{MakeWeakCocolia()})
 
 }

@@ -57,7 +57,6 @@ func (a ActionOrder) nextTurn() {
 		a.pq[i].priority -= actionValue
 	}
 
-	a.skillPoints = a.pq[0].actor.Act(a.allies, a.enemies, a.skillPoints)
 	a.pq.update(a.pq[0], a.pq[0].actor.GetActionValue())
 }
 
@@ -65,7 +64,7 @@ type ActionOrder struct {
 	pq          PriorityQueue
 	enemies     []Enemy
 	allies      []Ally
-	skillPoints int
+	skillPoints SkillPoints
 }
 
 func MakeActionOrder(allies []Ally, enemies []Enemy) ActionOrder {
@@ -95,10 +94,11 @@ func MakeActionOrder(allies []Ally, enemies []Enemy) ActionOrder {
 		}
 		allies[i].Init(left, right, heapify)
 	}
+	pq.Push()
 	return ActionOrder{
 		pq:          pq,
 		enemies:     enemies,
 		allies:      allies,
-		skillPoints: 3,
+		skillPoints: &SkillPoint{pool: 0, max: 5},
 	}
 }
