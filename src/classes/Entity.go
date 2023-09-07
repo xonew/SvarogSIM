@@ -20,7 +20,7 @@ func (s *Stat) GetReducedStat(reduction float64) float64 {
 }
 
 type Actor interface {
-	Act(allies []Ally, enemies []Enemy, skillPoints int) int
+	Act()
 	GetActionValue() int // returns action value
 
 }
@@ -31,13 +31,12 @@ type Creature interface {
 	//Dispel() bool // gets rid of buff
 	//Cleanse() bool // gets rid of debuff
 	GetName() string
-	GetLeft() Actor
-	GetRight() Actor
 	TakeDamage(attack *Attack)
 	RestoreHp(amount int) int
 	AddToRight(actor Actor)
 	AddToLeft(actor Actor)
 	HasDebuff(s string) bool
+	InitBattle(battle Combat) // adds battle to creature
 }
 
 type Entity struct {
@@ -79,18 +78,23 @@ type Entity struct {
 	Left         Actor
 	Right        Actor
 	Heapify      func()
+	Battle       *Combat
 }
 
-func (c *Entity) GetName() string {
-	return c.Name
+func (e *Entity) InitBattle(battle *Combat) {
+	e.Battle = battle
 }
 
-func (c *Entity) RestoreHp(amount int) int {
-	postBonusHealing := int(float64(amount) * (1 + c.IncomingHealingBonus))
-	if c.CurrHp+postBonusHealing > int(c.Hp.GetStat()) {
-		postBonusHealing = int(c.Hp.GetStat()) - c.CurrHp
+func (e *Entity) GetName() string {
+	return e.Name
+}
+
+func (e *Entity) RestoreHp(amount int) int {
+	postBonusHealing := int(float64(amount) * (1 + e.IncomingHealingBonus))
+	if e.CurrHp+postBonusHealing > int(e.Hp.GetStat()) {
+		postBonusHealing = int(e.Hp.GetStat()) - e.CurrHp
 	}
-	c.CurrHp += postBonusHealing
+	e.CurrHp += postBonusHealing
 	return postBonusHealing
 }
 
@@ -107,16 +111,16 @@ Universal DMG Reduction Multiplier = 100% * (1 - DMG Reduction_1) * (1 - DMG Red
 	When an enemy has Toughness, they have 10% Universal DMG Reduction, which is reduced to 0% when broken. Note this multiplier stacks multiplicative with other sources.
 */
 
-func (c *Entity) GetActionValue() int {
-	return c.ActionValue
+func (e *Entity) GetActionValue() int {
+	return e.ActionValue
 }
 
-func (c *Entity) GetDebuffs() *map[string]map[string]Effect {
-	return &c.Debuffs
+func (e *Entity) GetDebuffs() *map[string]map[string]Effect {
+	return &e.Debuffs
 }
 
-func (c *Entity) HasDebuff(s string) bool {
-	for _, ids := range c.Debuffs {
+func (e *Entity) HasDebuff(s string) bool {
+	for _, ids := range e.Debuffs {
 		for _, source := range ids {
 			if source.GetId() == s {
 				return true
@@ -126,92 +130,92 @@ func (c *Entity) HasDebuff(s string) bool {
 	return false
 }
 
-func (c *Entity) GetBaseActionValue() int {
-	return int(10000 / c.Spd.GetStat())
+func (e *Entity) GetBaseActionValue() int {
+	return int(10000 / e.Spd.GetStat())
 }
 
-func (c *Entity) ActionAdvance(value float64) {
-	c.ActionValue = int(math.Max(0, float64(c.ActionValue)*(1-value)))
+func (e *Entity) ActionAdvance(value float64) {
+	e.ActionValue = int(math.Max(0, float64(e.ActionValue)*(1-value)))
 }
 
 // ApplyBuff applies a buff to the creature, overwriting buffs of the same type and wielder
-func (c *Entity) ApplyBuff(buff Effect) {
-	c.Buffs[buff.GetId()][buff.GetSource()] = buff
+func (e *Entity) ApplyBuff(buff Effect) {
+	e.Buffs[buff.GetId()][buff.GetSource()] = buff
 	buff.Apply()
 	//TODO: debuffs, cleanse, dispel, stacking debuffs
 }
 
 // ApplyDebuff applies a debuff to the creature, overwriting debuffs of the same type and wielder
-func (c *Entity) ApplyDebuff(debuff Effect) bool {
-	if debuff.GetEffectiveHitRate()*(1-c.EffectResist) < rand.Float64() { //TODO: make this into a helper function
-		c.Debuffs[debuff.GetId()][debuff.GetSource()] = debuff
+func (e *Entity) ApplyDebuff(debuff Effect) bool {
+	if debuff.GetEffectiveHitRate()*(1-e.EffectResist) < rand.Float64() { //TODO: make this into a helper function
+		e.Debuffs[debuff.GetId()][debuff.GetSource()] = debuff
 		debuff.Apply()
-		c.Event("debuffApplied")
+		e.Event("debuffApplied")
 		return true
 	} else {
-		c.Event("debuffResisted")
+		e.Event("debuffResisted")
 		return false
 	}
 }
 
 // RollCrit returns the crit multiplier if the attack crits, or 1 if it doesn't
-func (c *Entity) RollCrit() float64 {
-	if rand.Float64() <= c.CritRate {
-		return 1 + c.CritDmg
+func (e *Entity) RollCrit() float64 {
+	if rand.Float64() <= e.CritRate {
+		return 1 + e.CritDmg
 	} else {
 		return 1
 	}
 }
 
 // LogDamageOut logs an attack to the creature's damage out log
-func (c *Entity) LogDamageOut(attack *Attack) {
-	c.DamageOutLog[attack.Target] = append(c.DamageOutLog[attack.Target], attack)
+func (e *Entity) LogDamageOut(attack *Attack) {
+	e.DamageOutLog[attack.Target] = append(e.DamageOutLog[attack.Target], attack)
 }
 
 // LogDamageIn logs an attack to the creature's damage in log
-func (c *Entity) LogDamageIn(attack *Attack) {
-	c.DamageInLog[attack.Attacker] = append(c.DamageInLog[attack.Attacker], attack)
+func (e *Entity) LogDamageIn(attack *Attack) {
+	e.DamageInLog[attack.Attacker] = append(e.DamageInLog[attack.Attacker], attack)
 }
 
-func (c *Entity) AddToRight(actor Actor) {
-	c.Right = actor
+func (e *Entity) AddToRight(actor Actor) {
+	e.Right = actor
 }
 
-func (c *Entity) AddToLeft(actor Actor) {
-	c.Left = actor
+func (e *Entity) AddToLeft(actor Actor) {
+	e.Left = actor
 }
 
-func (c *Entity) GetRight() Actor {
-	return c.Right
+func (e *Entity) GetRight() Actor {
+	return e.Right
 }
 
-func (c *Entity) GetLeft() Actor {
-	return c.Left
+func (e *Entity) GetLeft() Actor {
+	return e.Left
 }
 
-func (c *Entity) AddListener(function func(), event string, id string) {
-	c.Listeners[event][id] = function
+func (e *Entity) AddListener(function func(), event string, id string) {
+	e.Listeners[event][id] = function
 }
 
-func (c *Entity) AddHitListener(function func(*Attack), event string, id string) {
-	c.HitListeners[event][id] = function
+func (e *Entity) AddHitListener(function func(*Attack), event string, id string) {
+	e.HitListeners[event][id] = function
 }
 
-func (c *Entity) Event(event string) {
-	for _, function := range c.Listeners[event] {
+func (e *Entity) Event(event string) {
+	for _, function := range e.Listeners[event] {
 		function()
 	}
 }
-func (c *Entity) HitEvent(event string, attack *Attack) {
-	for _, function := range c.HitListeners[event] {
+func (e *Entity) HitEvent(event string, attack *Attack) {
+	for _, function := range e.HitListeners[event] {
 		function(attack)
 	}
 }
 
-func (c *Entity) RemoveListener(event string, id string) {
-	delete(c.Listeners[event], id)
+func (e *Entity) RemoveListener(event string, id string) {
+	delete(e.Listeners[event], id)
 }
 
-func (c *Entity) RemoveHitListener(event string, id string) {
-	delete(c.HitListeners[event], id)
+func (e *Entity) RemoveHitListener(event string, id string) {
+	delete(e.HitListeners[event], id)
 }

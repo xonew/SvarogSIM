@@ -5,6 +5,8 @@ type Ally interface {
 	Init(left Ally, right Ally, heapify func())
 	GetAggro() float64
 	GetCharacter() *Character
+	GetLeft() Ally
+	GetRight() Ally
 }
 
 type Character struct {
@@ -102,3 +104,7 @@ func Target(enemies []Enemy) Enemy {
 	}
 	return enemies[0]
 }
+
+func (c *Character) GetCharacter() *Character {
+	return c
+} // CHECK IF THIS ACTUALLY WORKS

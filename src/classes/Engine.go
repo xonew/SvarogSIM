@@ -51,23 +51,23 @@ func (pq *PriorityQueue) update(item *Item, priority int) {
 	heap.Fix(pq, item.index)
 }
 
-func (a ActionOrder) nextTurn() {
-	actionValue := a.pq[0].priority
-	for i := 0; i < a.pq.Len(); i++ {
-		a.pq[i].priority -= actionValue
+func (a Combat) nextTurn() {
+	actionValue := a.Pq[0].priority
+	for i := 0; i < a.Pq.Len(); i++ {
+		a.Pq[i].priority -= actionValue
 	}
 
-	a.pq.update(a.pq[0], a.pq[0].actor.GetActionValue())
+	a.Pq.update(a.Pq[0], a.Pq[0].actor.GetActionValue())
 }
 
-type ActionOrder struct {
-	pq          PriorityQueue
-	enemies     []Enemy
-	allies      []Ally
-	skillPoints SkillPoints
+type Combat struct {
+	Pq          PriorityQueue
+	Enemies     []Enemy
+	Allies      []Ally
+	SkillPoints SkillPoints
 }
 
-func MakeActionOrder(allies []Ally, enemies []Enemy) ActionOrder {
+func MakeActionOrder(allies []Ally, enemies []Enemy) Combat {
 	pq := make(PriorityQueue, 0)
 	for i := 0; i < len(allies); i++ {
 		var left Ally
@@ -94,11 +94,10 @@ func MakeActionOrder(allies []Ally, enemies []Enemy) ActionOrder {
 		}
 		allies[i].Init(left, right, heapify)
 	}
-	pq.Push()
-	return ActionOrder{
-		pq:          pq,
-		enemies:     enemies,
-		allies:      allies,
-		skillPoints: &SkillPoint{pool: 0, max: 5},
+	return Combat{
+		Pq:          pq,
+		Enemies:     enemies,
+		Allies:      allies,
+		SkillPoints: &SkillPoint{pool: 0, max: 5},
 	}
 }

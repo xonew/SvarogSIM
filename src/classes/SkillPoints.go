@@ -6,22 +6,22 @@ type SkillPoint struct {
 }
 
 type SkillPoints interface {
-	get() int
-	add(int)
-	reduce(int)
+	Get() int
+	Add(int)
+	Reduce(int)
 }
 
-func (s *SkillPoint) get() int {
+func (s *SkillPoint) Get() int {
 	return s.pool
 }
 
-func (s *SkillPoint) add(i int) {
+func (s *SkillPoint) Add(i int) {
 	if s.pool+i <= 5 {
 		s.pool += i
 	}
 }
 
-func (s *SkillPoint) reduce(i int) {
+func (s *SkillPoint) Reduce(i int) {
 	if s.pool-i >= 0 {
 		s.pool -= i
 	}

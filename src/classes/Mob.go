@@ -3,10 +3,13 @@ package classes
 import "math/rand"
 
 type Enemy interface {
-	Actor
+	Creature
 	Init(left Enemy, right Enemy, heapify *func())
 	IsWeakTo(element string) bool
 	GetAggro() string
+	GetMob() *Mob
+	GetLeft() Enemy
+	GetRight() Enemy
 }
 
 type Mob struct {
