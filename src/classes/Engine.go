@@ -133,20 +133,21 @@ func MakeBattle(allies []Ally, enemies []Enemy) Combat {
 	return combat
 }
 
-func (c *Combat) Run() map[string]int {
+func (c *Combat) Run() map[string]map[string]int {
 	totalActionValue := 0
 	for totalActionValue < 850 {
 		(*c.Pq)[0].actor.Act()
 		totalActionValue += c.nextTurn()
 	}
-	cumulativeDamage := make(map[string]int)
+	cumulativeDamage := make(map[string]map[string]int)
 	for _, attacker := range c.Allies {
+		cumulativeDamage[attacker.GetName()] = make(map[string]int)
 		for attackType, attacks := range attacker.GetDamageOutLog() {
 			cumulative := 0
 			for _, attack := range attacks {
 				cumulative += attack.PostMitDamage
 			}
-			cumulativeDamage[attackType] = cumulative
+			cumulativeDamage[attacker.GetName()][attackType] = cumulative
 		}
 	}
 

@@ -59,7 +59,7 @@ func MakeCharacter(name string, element string, path string,
 			EffectResist:       0,
 			CrowdControlResist: 0,
 			DmgBonus:           make(map[string]float64),
-			Buffs:              make(map[string]map[string]Effect),
+			Buffs:              make(map[string]map[string]Effect), //TODO: inner map is nil
 			Debuffs:            make(map[string]map[string]Effect),
 			ResPen:             make(map[string]float64),
 			Res:                make(map[string]float64),

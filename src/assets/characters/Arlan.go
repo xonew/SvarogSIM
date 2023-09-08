@@ -24,3 +24,10 @@ func (a *Arlan) Init(left Ally, right Ally, heapify func()) {
 	a.Left = left
 	a.Right = right
 }
+
+func (a *Arlan) Act() {
+	target := Target(a.Battle.Enemies)
+	target.TakeDamage(a.MakeAttack("skill", target.GetName(), "lightning", "skill", map[Stat]float64{
+		a.Atk: 2.64,
+	}))
+}

@@ -11,9 +11,12 @@ import (
 func main() {
 	order := MakeBattle(
 		[]Ally{MakeHook(),
-			MakeHook()},
+			MakeArlan()},
 		[]Enemy{MakeWeakCocolia()})
-	for key, value := range order.Run() {
-		fmt.Printf("%s: %d\n", key, value)
+	for ally, mp := range order.Run() {
+		fmt.Printf("%s:", ally)
+		for key, value := range mp {
+			fmt.Printf("%s: %d\n", key, value)
+		}
 	}
 }
