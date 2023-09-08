@@ -4,12 +4,14 @@ import "math/rand"
 
 type Enemy interface {
 	Creature
-	Init(left Enemy, right Enemy, heapify *func())
+	Init(left Enemy, right Enemy, heapify func())
 	IsWeakTo(element string) bool
 	GetAggro() string
 	GetMob() *Mob
 	GetLeft() Enemy
 	GetRight() Enemy
+	AddToLeft(Enemy)
+	AddToRight(Enemy)
 }
 
 type Mob struct {
@@ -19,6 +21,28 @@ type Mob struct {
 	CurrToughness   float64
 	Weaknesses      map[string]bool
 	ToughnessBroken bool
+	Left            Enemy
+	Right           Enemy
+}
+
+func (m *Mob) AddToLeft(enemy Enemy) {
+	m.Left = enemy
+} //TODO: make it do doubly linked list stuff
+
+func (m *Mob) AddToRight(enemy Enemy) {
+	m.Right = enemy
+}
+
+func (m *Mob) GetMob() *Mob {
+	return m
+} //TODO: test if this works
+
+func (m *Mob) GetLeft() Enemy {
+	return m.Left
+}
+
+func (m *Mob) GetRight() Enemy {
+	return m.Right
 }
 
 func MakeMob(name string, level int, enemyType string, toughness float64,
@@ -42,6 +66,8 @@ func MakeMob(name string, level int, enemyType string, toughness float64,
 			Debuffs:            make(map[string]map[string]Effect),
 			ResPen:             make(map[string]float64),
 			Res:                make(map[string]float64),
+			DamageOutLog:       make(map[string][]*Attack),
+			DamageInLog:        make(map[string][]*Attack),
 		},
 		EnemyType:       enemyType,
 		MaxToughness:    toughness,
@@ -66,13 +92,12 @@ func (m *Mob) MakeAttack(ally Ally) *Attack {
 	}
 }
 
-func (m *Mob) Act(allies []Ally, enemies []Enemy, skillPoints int) int {
+func (m *Mob) Act() {
 	if m.CurrToughness <= 0 {
 		m.ToughnessBroken = false
 	}
-	target := ChooseTarget(allies)
+	target := ChooseTarget(m.Battle.Allies)
 	target.TakeDamage(m.MakeAttack(target))
-	return skillPoints
 }
 
 func ChooseTarget(allies []Ally) Ally {

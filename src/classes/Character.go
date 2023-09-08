@@ -5,12 +5,16 @@ type Ally interface {
 	Init(left Ally, right Ally, heapify func())
 	GetAggro() float64
 	GetCharacter() *Character
+	AddToRight(ally Ally)
+	AddToLeft(ally Ally)
 	GetLeft() Ally
 	GetRight() Ally
 }
 
 type Character struct {
 	Entity
+	Left    Ally
+	Right   Ally
 	Element string
 	Path    string
 	Eidolon int
@@ -108,3 +112,19 @@ func Target(enemies []Enemy) Enemy {
 func (c *Character) GetCharacter() *Character {
 	return c
 } // CHECK IF THIS ACTUALLY WORKS
+
+func (c *Character) AddToRight(ally Ally) {
+	c.Right = ally
+}
+
+func (c *Character) AddToLeft(ally Ally) {
+	c.Left = ally
+}
+
+func (c *Character) GetLeft() Ally {
+	return c.Left
+}
+
+func (c *Character) GetRight() Ally {
+	return c.Right
+}

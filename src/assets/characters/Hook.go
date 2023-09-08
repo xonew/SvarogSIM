@@ -20,6 +20,7 @@ func (h *Hook) Init(left Ally, right Ally, heapify func()) {
 	h.CritDmg += 0.053 + 0.08
 	h.Hp.Percent += 0.04 + 0.08 + 0.06
 	h.Atk.Percent += 0.04 + 0.04 + 0.06 + 0.06 + 0.08
+	// TODO: call a universal entity init function here
 	h.ActionValue = int(15000 / h.Spd.GetStat())
 	h.CurrHp = int(h.Hp.GetStat())
 	h.Heapify = heapify

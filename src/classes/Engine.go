@@ -51,24 +51,32 @@ func (pq *PriorityQueue) update(item *Item, priority int) {
 	heap.Fix(pq, item.index)
 }
 
-func (a Combat) nextTurn() {
-	actionValue := a.Pq[0].priority
+// nextTurn does the next turn and returns the number of action value elapsed
+func (a Combat) nextTurn() int {
+	actionValue := (*a.Pq)[0].priority
 	for i := 0; i < a.Pq.Len(); i++ {
-		a.Pq[i].priority -= actionValue
+		(*a.Pq)[i].priority -= actionValue
 	}
 
-	a.Pq.update(a.Pq[0], a.Pq[0].actor.GetActionValue())
+	a.Pq.update((*a.Pq)[0], (*a.Pq)[0].actor.GetActionValue())
+	return actionValue
 }
 
 type Combat struct {
-	Pq          PriorityQueue
+	Pq          *PriorityQueue
 	Enemies     []Enemy
 	Allies      []Ally
 	SkillPoints SkillPoints
 }
 
-func MakeActionOrder(allies []Ally, enemies []Enemy) Combat {
+func MakeBattle(allies []Ally, enemies []Enemy) Combat {
 	pq := make(PriorityQueue, 0)
+	combat := Combat{
+		Pq:          &pq,
+		Enemies:     enemies,
+		Allies:      allies,
+		SkillPoints: &SkillPoint{pool: 0, max: 5},
+	}
 	for i := 0; i < len(allies); i++ {
 		var left Ally
 		var right Ally
@@ -93,11 +101,54 @@ func MakeActionOrder(allies []Ally, enemies []Enemy) Combat {
 			pq.update(item, item.priority)
 		}
 		allies[i].Init(left, right, heapify)
+		allies[i].InitBattle(&combat)
 	}
-	return Combat{
-		Pq:          pq,
-		Enemies:     enemies,
-		Allies:      allies,
-		SkillPoints: &SkillPoint{pool: 0, max: 5},
+
+	for i := 0; i < len(enemies); i++ {
+		var left Enemy
+		var right Enemy
+		if i-1 < 0 {
+			left = nil
+		} else {
+			left = enemies[i-1]
+		}
+		if i >= len(enemies)-1 {
+			right = nil
+		} else {
+			right = enemies[i+1]
+		}
+
+		item := &Item{
+			actor:    enemies[i],
+			priority: enemies[i].GetActionValue(),
+		}
+		pq.Push(item)
+		heapify := func() {
+			item.priority = item.actor.GetActionValue()
+			pq.update(item, item.priority)
+		}
+		enemies[i].Init(left, right, heapify)
+		enemies[i].InitBattle(&combat)
 	}
+	return combat
+}
+
+func (c *Combat) Run() map[string]int {
+	totalActionValue := 0
+	for totalActionValue < 850 {
+		(*c.Pq)[0].actor.Act()
+		totalActionValue += c.nextTurn()
+	}
+	cumulativeDamage := make(map[string]int)
+	for _, attacker := range c.Allies {
+		for attackType, attacks := range attacker.GetDamageOutLog() {
+			cumulative := 0
+			for _, attack := range attacks {
+				cumulative += attack.PostMitDamage
+			}
+			cumulativeDamage[attackType] = cumulative
+		}
+	}
+
+	return cumulativeDamage
 }

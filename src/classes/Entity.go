@@ -33,10 +33,9 @@ type Creature interface {
 	GetName() string
 	TakeDamage(attack *Attack)
 	RestoreHp(amount int) int
-	AddToRight(actor Actor)
-	AddToLeft(actor Actor)
 	HasDebuff(s string) bool
-	InitBattle(battle Combat) // adds battle to creature
+	InitBattle(battle *Combat) // adds battle to creature
+	GetDamageOutLog() map[string][]*Attack
 }
 
 type Entity struct {
@@ -75,8 +74,6 @@ type Entity struct {
 
 	DamageOutLog map[string][]*Attack
 	DamageInLog  map[string][]*Attack
-	Left         Actor
-	Right        Actor
 	Heapify      func()
 	Battle       *Combat
 }
@@ -139,9 +136,20 @@ func (e *Entity) ActionAdvance(value float64) {
 }
 
 // ApplyBuff applies a buff to the creature, overwriting buffs of the same type and wielder
-func (e *Entity) ApplyBuff(buff Effect) {
-	e.Buffs[buff.GetId()][buff.GetSource()] = buff
-	buff.Apply()
+func (e *Entity) ApplyBuff(buff Effect) bool {
+	_, exists := e.Buffs[buff.GetId()][buff.GetSource()]
+	if exists {
+		if e.Buffs[buff.GetId()][buff.GetSource()].IsStackable() {
+			//e.Buffs[buff.GetId()][buff.GetSource()].Stack()
+			return true
+		} else {
+			return false
+		}
+	} else {
+		e.Buffs[buff.GetId()][buff.GetSource()] = buff
+		buff.Apply()
+		return true
+	}
 	//TODO: debuffs, cleanse, dispel, stacking debuffs
 }
 
@@ -169,28 +177,12 @@ func (e *Entity) RollCrit() float64 {
 
 // LogDamageOut logs an attack to the creature's damage out log
 func (e *Entity) LogDamageOut(attack *Attack) {
-	e.DamageOutLog[attack.Target] = append(e.DamageOutLog[attack.Target], attack)
+	e.DamageOutLog[attack.Name] = append(e.DamageOutLog[attack.Target], attack)
 }
 
 // LogDamageIn logs an attack to the creature's damage in log
 func (e *Entity) LogDamageIn(attack *Attack) {
-	e.DamageInLog[attack.Attacker] = append(e.DamageInLog[attack.Attacker], attack)
-}
-
-func (e *Entity) AddToRight(actor Actor) {
-	e.Right = actor
-}
-
-func (e *Entity) AddToLeft(actor Actor) {
-	e.Left = actor
-}
-
-func (e *Entity) GetRight() Actor {
-	return e.Right
-}
-
-func (e *Entity) GetLeft() Actor {
-	return e.Left
+	e.DamageInLog[attack.Name] = append(e.DamageInLog[attack.Attacker], attack)
 }
 
 func (e *Entity) AddListener(function func(), event string, id string) {
@@ -218,4 +210,8 @@ func (e *Entity) RemoveListener(event string, id string) {
 
 func (e *Entity) RemoveHitListener(event string, id string) {
 	delete(e.HitListeners[event], id)
+}
+
+func (e *Entity) GetDamageOutLog() map[string][]*Attack {
+	return e.DamageOutLog
 }

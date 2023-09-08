@@ -10,6 +10,7 @@ type Effect interface {
 	GetId() string
 	GetSource() string
 	GetEffectiveHitRate() float64
+	IsStackable() bool
 }
 
 type Dot interface {
@@ -23,6 +24,7 @@ type Buff struct {
 	Strength   float64
 	Value      float64 // optional
 	SourceName string
+	Stackable  bool
 }
 
 type Debuff struct {
@@ -40,6 +42,10 @@ type DotDebuff struct {
 	Holder  *Entity
 	IsBreak bool
 	Scaling map[*Stat]float64
+}
+
+func (b *Buff) IsStackable() bool {
+	return b.Stackable
 }
 
 func (b *Buff) GetId() string {
