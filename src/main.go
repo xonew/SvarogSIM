@@ -1,11 +1,9 @@
 package main
 
 import (
+	. "SvarogSIM/src/assets/characters"
 	. "SvarogSIM/src/classes"
 	"fmt"
-)
-import (
-	. "SvarogSIM/src/assets/characters"
 )
 
 func main() {

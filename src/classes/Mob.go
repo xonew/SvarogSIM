@@ -98,6 +98,7 @@ func (m *Mob) Act() {
 	}
 	target := ChooseTarget(m.Battle.Allies)
 	target.TakeDamage(m.MakeAttack(target))
+	m.ModifyActionValue(m.GetBaseActionValue())
 }
 
 func ChooseTarget(allies []Ally) Ally {

@@ -1,64 +1,46 @@
 package classes
 
 import (
-	"container/heap"
+	"sort"
 )
 
-// An Item is something we manage in a priority queue.
-type Item struct {
-	actor    Actor // The actor of the item; arbitrary.
-	priority int   // The priority of the item in the queue.
-	// The index is needed by update and is maintained by the heap.Interface methods.
-	index int // The index of the item in the heap.
-}
-
 // A PriorityQueue implements heap.Interface and holds Items.
-type PriorityQueue []*Item
+type PriorityQueue []Actor
 
 func (pq PriorityQueue) Len() int { return len(pq) }
 
 func (pq PriorityQueue) Less(i, j int) bool {
-	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
-	return pq[i].priority > pq[j].priority
+	return pq[i].GetActionValue() < pq[j].GetActionValue()
 }
 
 func (pq PriorityQueue) Swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
-	pq[i].index = i
-	pq[j].index = j
 }
 
 func (pq *PriorityQueue) Push(x any) {
-	n := len(*pq)
-	item := x.(*Item)
-	item.index = n
+	item := x.(Actor)
 	*pq = append(*pq, item)
+	pq.Sort()
 }
 
 func (pq *PriorityQueue) Pop() any {
 	old := *pq
-	n := len(old)
-	item := old[n-1]
-	old[n-1] = nil  // avoid memory leak
-	item.index = -1 // for safety
-	*pq = old[0 : n-1]
+	item := old[0]
+	old[0] = nil // avoid memory leak
+	*pq = old[0:]
 	return item
 }
 
-// update modifies the priority and actor of an Item in the queue.
-func (pq *PriorityQueue) update(item *Item, priority int) {
-	item.priority = priority
-	heap.Fix(pq, item.index)
+func (pq *PriorityQueue) Sort() {
+	sort.Sort(pq)
 }
 
-// nextTurn does the next turn and returns the number of action value elapsed
-func (a Combat) nextTurn() int {
-	actionValue := (*a.Pq)[0].priority
+// startTurn starts the next turn and returns the number of action value elapsed
+func (a Combat) startTurn() int {
+	actionValue := (*a.Pq)[0].GetActionValue()
 	for i := 0; i < a.Pq.Len(); i++ {
-		(*a.Pq)[i].priority -= actionValue
+		(*a.Pq)[i].ModifyActionValue(-actionValue)
 	}
-
-	a.Pq.update((*a.Pq)[0], (*a.Pq)[0].actor.GetActionValue())
 	return actionValue
 }
 
@@ -91,15 +73,8 @@ func MakeBattle(allies []Ally, enemies []Enemy) Combat {
 			right = allies[i+1]
 		}
 
-		item := &Item{
-			actor:    allies[i],
-			priority: allies[i].GetActionValue(),
-		}
-		pq.Push(item)
-		heapify := func() {
-			item.priority = item.actor.GetActionValue()
-			pq.update(item, item.priority)
-		}
+		pq.Push(allies[i])
+		heapify := combat.Pq.Sort
 		allies[i].Init(left, right, heapify)
 		allies[i].InitBattle(&combat)
 	}
@@ -117,16 +92,8 @@ func MakeBattle(allies []Ally, enemies []Enemy) Combat {
 		} else {
 			right = enemies[i+1]
 		}
-
-		item := &Item{
-			actor:    enemies[i],
-			priority: enemies[i].GetActionValue(),
-		}
-		pq.Push(item)
-		heapify := func() {
-			item.priority = item.actor.GetActionValue()
-			pq.update(item, item.priority)
-		}
+		pq.Push(enemies[i])
+		heapify := combat.Pq.Sort
 		enemies[i].Init(left, right, heapify)
 		enemies[i].InitBattle(&combat)
 	}
@@ -136,8 +103,9 @@ func MakeBattle(allies []Ally, enemies []Enemy) Combat {
 func (c *Combat) Run() map[string]map[string]int {
 	totalActionValue := 0
 	for totalActionValue < 850 {
-		(*c.Pq)[0].actor.Act()
-		totalActionValue += c.nextTurn()
+		c.Pq.Sort()
+		totalActionValue += c.startTurn()
+		(*c.Pq)[0].Act()
 	}
 	cumulativeDamage := make(map[string]map[string]int)
 	for _, attacker := range c.Allies {

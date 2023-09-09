@@ -36,6 +36,7 @@ func (h *Hook) Act() {
 		pointGain += h.basicAttack(Target(h.Battle.Enemies))
 	}
 	h.Battle.SkillPoints.Add(pointGain)
+	h.ModifyActionValue(h.GetBaseActionValue())
 }
 
 func (h *Hook) basicAttack(target Enemy) int {
@@ -56,11 +57,10 @@ func (h *Hook) skill(target Enemy) int {
 	var hit *Attack
 
 	if h.Enhanced {
-		h.DmgBonus["skill"] += 0.20
 		hit = h.MakeAttack("Enhanced Skill", target.GetName(), "fire", "skill", map[Stat]float64{
 			h.Atk: 2.80,
 		})
-		h.DmgBonus["skill"] -= 0.20
+		hit.DamageBonus += 0.2
 	} else {
 		hit = h.MakeAttack("Skill", target.GetName(), "fire", "skill", map[Stat]float64{
 			h.Atk: 2.40,
@@ -75,7 +75,7 @@ func (h *Hook) skill(target Enemy) int {
 			})
 			target.GetRight().TakeDamage(blast)
 		}
-		if target.GetRight != nil {
+		if target.GetRight() != nil {
 			blast := h.MakeAttack("Enhanced Skill Blast", target.GetName(), "fire", "skill", map[Stat]float64{
 				h.Atk: 0.80,
 			})

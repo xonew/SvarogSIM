@@ -22,7 +22,9 @@ func (s *Stat) GetReducedStat(reduction float64) float64 {
 type Actor interface {
 	Act()
 	GetActionValue() int // returns action value
-
+	ModifyActionValue(value int)
+	GetBaseActionValue() int
+	ActionAdvance(value float64)
 }
 type Creature interface {
 	Actor
@@ -110,6 +112,11 @@ Universal DMG Reduction Multiplier = 100% * (1 - DMG Reduction_1) * (1 - DMG Red
 
 func (e *Entity) GetActionValue() int {
 	return e.ActionValue
+}
+
+// ModifyActionValue changes the action value adding the given amount
+func (e *Entity) ModifyActionValue(value int) {
+	e.ActionValue += value
 }
 
 func (e *Entity) GetDebuffs() *map[string]map[string]Effect {
