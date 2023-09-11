@@ -45,10 +45,12 @@ func (a Combat) startTurn() int {
 }
 
 type Combat struct {
-	Pq          *PriorityQueue
-	Enemies     []Enemy
-	Allies      []Ally
-	SkillPoints SkillPoints
+	Pq             *PriorityQueue
+	Enemies        []Enemy
+	Allies         []Ally
+	SkillPoints    SkillPoints
+	TurnStartQueue []func()
+	TurnEndQueue   []func()
 }
 
 func MakeBattle(allies []Ally, enemies []Enemy) Combat {
@@ -105,7 +107,14 @@ func (c *Combat) Run() map[string]map[string]int {
 	for totalActionValue < 850 {
 		c.Pq.Sort()
 		totalActionValue += c.startTurn()
+		for _, function := range c.TurnStartQueue {
+			function()
+		}
 		(*c.Pq)[0].Act()
+		for _, function := range c.TurnEndQueue {
+			function()
+		}
+		(*c.Pq)[0].endTurn()
 	}
 	cumulativeDamage := make(map[string]map[string]int)
 	for _, attacker := range c.Allies {
